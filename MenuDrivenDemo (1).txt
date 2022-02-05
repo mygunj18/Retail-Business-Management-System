@@ -1,0 +1,660 @@
+package database;
+import java.sql.*;
+import oracle.jdbc.*;
+import java.math.*;
+import java.io.*;
+import java.awt.*;
+import oracle.jdbc.pool.OracleDataSource;
+import java.util.Scanner;
+import java.util.stream.Stream;
+
+public class menudriven {
+
+    public static void main(String args[]) throws SQLException {
+        try {
+
+            //connecting to database
+            OracleDataSource ds = new oracle.jdbc.pool.OracleDataSource();
+            ds.setURL("jdbc:oracle:thin:@castor.cc.binghamton.edu:1521:acad111");
+
+            //read input from user for username and password
+            BufferedReader input;
+            String username;
+            String password;
+
+            //prompt for username
+            input = new BufferedReader(new InputStreamReader(System.in));
+            System.out.print("Please enter your pods Username for oracle sqlplus connection:");
+            username = input.readLine();
+
+            //prompt for password
+            System.out.print("Please enter your sqlplus Password for oracle sqlplus connection:");
+            password = input.readLine();
+            Connection conn = ds.getConnection(username, password);
+            Statement s = conn.createStatement();
+
+            //flag for continuous loop to ask the user on entering options
+            int option = 0;
+
+            while (option != 7) {
+                System.out.print("\n***********PLEASE SELECT YOUR PREFFERED OPTION FROM THE BELOW MENU***********\n");
+                System.out.print("\nEnter '1' to show all the tables\n");
+                System.out.print("Enter '2' to check the purchases made by a specific customer\n");
+                System.out.print("Enter '3' to check the number of customers who have purchased a specific product\n");
+                System.out.print("Enter '4' to add a new customer into customer table\n");
+                System.out.print("Enter '5' to add a new purchases into purchase table  :: Warning - this action will result changes in multiple tables\n");
+                System.out.print("Enter '6' to check logs\n");
+                System.out.print("Enter '7' to exit\n");
+
+                Scanner action = new Scanner(System.in);
+                option = action.nextInt();
+
+                if (option == 1) {
+
+                    s.executeUpdate("begin dbms_output.enable(); end;");
+
+                    //Prepare to call stored procedure show_employees:
+                    CallableStatement em = conn.prepareCall("begin ? := check_pkg.show_employees(); end;");
+
+                    //register the out parameter (the first parameter)
+                    em.registerOutParameter(1, OracleTypes.CURSOR);
+                    // execute and retrieve the result set
+                    em.execute();
+
+                    ResultSet emrs = (ResultSet) em.getObject(1);
+                    // print the results
+                    System.out.println();
+                    System.out.println(" ALL EMPLOYEES  \n");
+
+                    while (emrs.next()) {
+                        System.out.println(emrs.getString(1) + "\t" + emrs.getString(2) + "\t" + emrs.getString(3) + "\t"+emrs.getString(4));
+                    }
+
+                    try (CallableStatement call = conn.prepareCall(
+                        "declare " +
+                        "  num integer := 1000;" +
+                        "begin " +
+                        "  dbms_output.get_lines(?, num);" +
+                        "end;"
+                    )) {
+                        call.registerOutParameter(1, Types.ARRAY,
+                            "DBMSOUTPUT_LINESARRAY");
+                        call.execute();
+
+                        Array array = null;
+                        try {
+                            array = call.getArray(1);
+                            if (array != null) {
+                                Stream.of((Object[]) array.getArray())
+                                    .forEach(System.out::println);
+                            }
+                        } finally {
+                            if (array != null)
+                                array.free();
+                        }
+                    }
+
+                    s.executeUpdate("begin dbms_output.disable(); end;");
+
+                    //Prepare to call stored procedure show_customers:
+                    s.executeUpdate("begin dbms_output.enable(); end;");
+                    CallableStatement cu = conn.prepareCall("begin ? := check_pkg.show_customers(); end;");
+
+                    //register the out parameter (the first parameter)
+                    cu.registerOutParameter(1, OracleTypes.CURSOR);
+                    // execute and retrieve the result set
+                    cu.execute();
+                    ResultSet curs = (ResultSet) cu.getObject(1);
+                    // print the results
+                    System.out.println();
+                    System.out.println(" ALL CUSTOMERS  \n");
+
+                    while (curs.next()) {
+                        System.out.println(curs.getString(1) + "\t" + curs.getString(2) + "\t" + curs.getString(3) + "\t" + curs.getInt(4) +"\t"+
+                            curs.getDate(5));
+                        
+
+                    }
+                    try (CallableStatement call = conn.prepareCall(
+                        "declare " +
+                        "  num integer := 1000;" +
+                        "begin " +
+                        "  dbms_output.get_lines(?, num);" +
+                        "end;"
+                    )) {
+                        call.registerOutParameter(1, Types.ARRAY,
+                            "DBMSOUTPUT_LINESARRAY");
+                        call.execute();
+
+                        Array array = null;
+                        try {
+                            array = call.getArray(1);
+                            // if (array != null) {
+                            Stream.of((Object[]) array.getArray())
+                                .forEach(System.out::println);
+                            //  }
+                        } finally {
+                            if (array != null)
+                                array.free();
+                        }
+                    }
+
+                    s.executeUpdate("begin dbms_output.disable(); end;");
+
+                    //Prepare to call stored procedure show_products:
+                    s.executeUpdate("begin dbms_output.enable(); end;");
+                    CallableStatement pr = conn.prepareCall("begin ? := check_pkg.show_products(); end;");
+
+                    //register the out parameter (the first parameter)
+                    pr.registerOutParameter(1, OracleTypes.CURSOR);
+                    // execute and retrieve the result set
+                    pr.execute();
+                    ResultSet prrs = (ResultSet) pr.getObject(1);
+                    // print the results
+                    System.out.println();
+                    System.out.println(" ALL PRODUCTS  \n");
+
+                    while (prrs.next()) {
+                        System.out.println(prrs.getString(1) + "\t" + prrs.getString(2) + " \t" + prrs.getInt(3) + "\t" + prrs.getInt(4) +
+                            "\t" + prrs.getDouble(5) + "\t" + prrs.getDouble(6));
+                    }
+                    try (CallableStatement call = conn.prepareCall(
+                        "declare " +
+                        "  num integer := 1000;" +
+                        "begin " +
+                        "  dbms_output.get_lines(?, num);" +
+                        "end;"
+                    )) {
+                        call.registerOutParameter(1, Types.ARRAY,
+                            "DBMSOUTPUT_LINESARRAY");
+                        call.execute();
+
+                        Array array = null;
+                        try {
+                            array = call.getArray(1);
+                            if (array != null) {
+                                Stream.of((Object[]) array.getArray())
+                                    .forEach(System.out::println);
+                            }
+
+
+                        } finally {
+                            if (array != null) {
+                                array.free();
+                            }
+                        }
+                    }
+                    s.executeUpdate("begin dbms_output.disable(); end;");
+
+                    //Prepare to call stored procedure show_purchases:
+                    s.executeUpdate("begin dbms_output.enable(); end;");
+                    CallableStatement pu = conn.prepareCall("begin ? := check_pkg.show_purchases(); end;");
+
+                    //register the out parameter (the first parameter)
+                    pu.registerOutParameter(1, OracleTypes.CURSOR);
+                    // execute and retrieve the result set
+                    pu.execute();
+                    ResultSet purs = (ResultSet) pu.getObject(1);
+                    // print the results
+                    System.out.println();
+                    System.out.println(" ALL PURCHASES  \n");
+                    int testPurchasesCount = 0;
+                    while (purs.next()) {
+                        System.out.println(purs.getString(1) + "\t" + purs.getString(2) + "\t" + purs.getString(3) + "\t" + purs.getString(4) +
+                            "\t" + purs.getDate(5) + "\t" + purs.getInt(6) + "\t" + purs.getDouble(7) + "\t" + purs.getDouble(8) + "\t" + purs.getDouble(9));
+                    }
+
+                    try (CallableStatement call = conn.prepareCall(
+                        "declare " +
+                        "  num integer := 1000;" +
+                        "begin " +
+                        "  dbms_output.get_lines(?, num);" +
+                        "end;"
+                    )) {
+                        call.registerOutParameter(1, Types.ARRAY,
+                            "DBMSOUTPUT_LINESARRAY");
+                        call.execute();
+
+                        Array array = null;
+                        try {
+                            array = call.getArray(1);
+                            if (array != null) {
+                                Stream.of((Object[]) array.getArray())
+                                    .forEach(System.out::println);
+                            }
+                        } finally {
+                            if (array != null)
+                                array.free();
+                        }
+                    }
+                    s.executeUpdate("begin dbms_output.disable(); end;");
+                    //close the result set, statement, and the connection
+                    em.close();
+                    emrs.close();
+                    cu.close();
+                    curs.close();
+                    pr.close();
+                    prrs.close();
+                    pu.close();
+                    purs.close();
+                }
+
+                if (option == 2) {
+
+                    // Input cid from keyboard
+                    BufferedReader input_cid;
+                    String cid;
+                    input_cid = new BufferedReader(new InputStreamReader(System.in));
+                    System.out.print("Please Enter customer CID:");
+                    cid = input_cid.readLine();
+
+                    s.executeUpdate("begin dbms_output.enable(); end;");
+                    //Prepare to call stored procedure purchases_made:
+                    CallableStatement cs = conn.prepareCall("begin check_pkg.purchases_made(:1, :2); end;");
+
+                    //set the in parameter (the first parameter)
+                    cs.setString(1, cid);
+
+                    //register the out parameter (the first parameter)
+                    cs.registerOutParameter(2, OracleTypes.CURSOR);
+
+                    // execute and retrieve the result set
+                    cs.execute();
+                    ResultSet rs = (ResultSet) cs.getObject(2);
+                    // String nameCheck = "unavailable";
+                    // print the results
+                    while (rs.next()) {
+                        //  nameCheck = rs.getString(1);
+                        System.out.println(rs.getString(1) + "\t" + rs.getString(2) + "\t" + rs.getDate(3) + "\t" +
+                            rs.getInt(4) + "\t" + rs.getDouble(5) + "\t" + rs.getDouble(6));
+                    }
+
+                    try (CallableStatement call = conn.prepareCall(
+                        "declare " +
+                        "  num integer := 1000;" +
+                        "begin " +
+                        "  dbms_output.get_lines(?, num);" +
+                        "end;"
+                    )) {
+                        call.registerOutParameter(1, Types.ARRAY,
+                            "DBMSOUTPUT_LINESARRAY");
+                        call.execute();
+
+                        Array array = null;
+                        try {
+                            array = call.getArray(1);
+                            if (array != null) {
+                                Stream.of((Object[]) array.getArray())
+                                    .forEach(System.out::println);
+                            }
+                        } finally {
+                            if (array != null)
+                                array.free();
+                        }
+                    }
+                    s.executeUpdate("begin dbms_output.disable(); end;");
+                    //close the result set, statement, and the connection
+                    rs.close();
+                    cs.close();
+
+                }
+
+                if (option == 3) {
+
+                    s.executeUpdate("begin dbms_output.enable(); end;");
+                    //Prepare to call stored procedure:
+                    CallableStatement cs = conn.prepareCall("begin ? := check_pkg.no_of_customers(?); end;");
+
+                    //read pid input from the keyboard
+                    BufferedReader input_pid;
+                    String pid;
+                    input_pid = new BufferedReader(new InputStreamReader(System.in));
+                    System.out.print("Please Enter Product ID:");
+                    pid = input_pid.readLine();
+
+                    //set the in parameter (the first parameter)
+                    cs.setString(2, pid);
+
+                    //register the out parameter (the first parameter)
+                    cs.registerOutParameter(1, java.sql.Types.INTEGER);
+
+                    // execute and retrieve the result set   
+                    cs.execute();
+
+                    int purchase_count = cs.getInt(1);
+                    System.out.println("The number of customers who have bought the product " + pid + " are " + purchase_count);
+
+                    try (CallableStatement call = conn.prepareCall(
+                        "declare " +
+                        "  num integer := 1000;" +
+                        "begin " +
+                        "  dbms_output.get_lines(?, num);" +
+                        "end;"
+                    )) {
+                        call.registerOutParameter(1, Types.ARRAY,
+                            "DBMSOUTPUT_LINESARRAY");
+                        call.execute();
+
+                        Array array = null;
+                        try {
+                            array = call.getArray(1);
+                            if (array != null) {
+                                Stream.of((Object[]) array.getArray())
+                                    .forEach(System.out::println);
+                            }
+                        } finally {
+                            if (array != null)
+                                array.free();
+                        }
+                    }
+                    s.executeUpdate("begin dbms_output.disable(); end;");
+
+                    //close the result set, statement, and the connection
+                    cs.close();
+
+                }
+
+                if (option == 4) {
+                    // Query
+                    Statement stmt = conn.createStatement();
+
+                    // Save result
+                    ResultSet rset;
+                    s.executeUpdate("begin dbms_output.enable(); end;");
+                    rset = stmt.executeQuery("SELECT * FROM customers");
+
+                    // Print the customers table before insertion 
+                    while (rset.next()) {
+
+                        System.out.print(rset.getString(1) + "  " + "\t");
+                        System.out.print(rset.getString(2) + "  " + "\t");
+                        System.out.print(rset.getString(3) + "  " + "\t");
+                        System.out.print(rset.getInt(4) + "  " + "\t");
+                        System.out.print(rset.getString(5) + "  " + "\n");
+                    }
+
+
+                    //Input customer_id from the keyboard
+                    BufferedReader inputCustId;
+                    inputCustId = new BufferedReader(new InputStreamReader(System.in));
+                    String customer_id;
+                    System.out.print("Please enter Customer ID:");
+                    customer_id = inputCustId.readLine();
+
+                    //Input customer name from the keyboard
+                    BufferedReader inputCustName;
+                    inputCustName = new BufferedReader(new InputStreamReader(System.in));
+                    String name;
+                    System.out.print("Please enter Customer Name:");
+                    name = inputCustName.readLine();
+
+                    //Input customer telephone# from the keyboard  
+                    BufferedReader inputCustTelephone;
+                    inputCustTelephone = new BufferedReader(new InputStreamReader(System.in));
+                    String telephone;
+                    System.out.print("Please enter telephone:");
+                    telephone = inputCustTelephone.readLine();
+
+                    //Prepare to call stored procedure add_customer:
+                    CallableStatement insert = conn.prepareCall("Begin check_pkg.add_customer(:1,:2,:3); end;");
+
+                    // set the input for the procedure
+                    insert.setString(1, customer_id);
+                    insert.setString(2, name);
+                    insert.setString(3, telephone);
+
+                    insert.executeQuery();
+
+                    //Query again.
+                    rset = stmt.executeQuery("SELECT * FROM customers");
+
+                    // Print the customers table after insertion of a new row
+                    while (rset.next()) {
+
+                        System.out.print(rset.getString(1) + "  " + "\t");
+                        System.out.print(rset.getString(2) + "  " + "\t");
+                        System.out.print(rset.getString(3) + "  " + "\t");
+                        System.out.print(rset.getInt(4) + "  " + "\t");
+                        System.out.print(rset.getString(5) + "  " + "\n");
+                    }
+
+                    try (CallableStatement call = conn.prepareCall(
+                        "declare " +
+                        "  num integer := 1000;" +
+                        "begin " +
+                        "  dbms_output.get_lines(?, num);" +
+                        "end;"
+                    )) {
+                        call.registerOutParameter(1, Types.ARRAY,
+                            "DBMSOUTPUT_LINESARRAY");
+                        call.execute();
+
+                        Array array = null;
+                        try {
+                            array = call.getArray(1);
+                            if (array != null) {
+                                Stream.of((Object[]) array.getArray())
+                                    .forEach(System.out::println);
+                            }
+                        } finally {
+                            if (array != null)
+                                array.free();
+                        }
+                    }
+                    s.executeUpdate("begin dbms_output.disable(); end;");
+
+                    //close the result set, statement, and the connection
+                    rset.close();
+                    stmt.close();
+                }
+
+                if (option == 5) {
+
+                    // Query
+                    s.executeUpdate("begin dbms_output.enable(); end;");
+                    Statement stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
+
+                    // Save result
+                    //for products table
+                    ResultSet rset;
+                    //for purchases table
+                    ResultSet rs;
+                    //for customers table
+                    ResultSet rs1;
+
+                    rset = stmt.executeQuery("SELECT * FROM products");
+                    System.out.println("\nPrevious details in Products table\n");
+                    // Print previous products table
+                    while (rset.next()) {
+
+                        System.out.print(rset.getString(1) + "  " + "\t");
+                        System.out.print(rset.getString(2) + "  " + "\t");
+                        System.out.print(rset.getInt(3) + "  " + "\t");
+                        System.out.print(rset.getInt(4) + "  " + "\t");
+                        System.out.print(rset.getDouble(5) + "  " + "\t");
+                        System.out.print(rset.getDouble(6) + "  " + "\n");
+                    }
+
+                    rs1 = stmt.executeQuery("SELECT * FROM customers");
+                    System.out.println("\nPrevious details in customers table\n");
+                    // Print previous customers table
+                    while (rs1.next()) {
+                        System.out.print(rs1.getString(1) + "  " + "\t");
+                        System.out.print(rs1.getString(2) + "  " + "\t");
+                        System.out.print(rs1.getString(3) + "  " + "\t");
+                        System.out.print(rs1.getInt(4) + "  " + "\t");
+                        System.out.print(rs1.getDate(5) + "  " + "\n");
+                    }
+
+                    rs = stmt.executeQuery("SELECT * FROM purchases");
+                    System.out.println("\nPrevious details in Purchases table\n");
+                    // Print previous purchases table
+                    while (rs.next()) {
+                        System.out.print(rs.getString(1) + "  " + "\t");
+                        System.out.print(rs.getString(2) + "  " + "\t");
+                        System.out.print(rs.getString(3) + "  " + "\t");
+                        System.out.print(rs.getString(4) + "  " + "\t");
+                        System.out.print(rs.getDate(5) + "  " + "\t");
+                        System.out.print(rs.getInt(6) + "  " + "\t");
+                        System.out.print(rs.getDouble(7) + "  " + "\t");
+                        System.out.print(rs.getDouble(8) + "  " + "\t");
+                        System.out.print(rs.getDouble(9) + "  " + "\n");
+                    }
+
+                    //Input employee id from keyboard
+                    BufferedReader input_eid;
+                    input_eid = new BufferedReader(new InputStreamReader(System.in));
+                    String eid;
+                    System.out.print("Please enter Employee ID: ");
+                    eid = input_eid.readLine();
+
+                    //Input product ID from keyboard
+                    BufferedReader input_pid;
+                    input_pid = new BufferedReader(new InputStreamReader(System.in));
+                    String pid;
+                    System.out.print("Please enter Product ID: ");
+                    pid = input_pid.readLine();
+
+                    //Input customer ID from keyboard  
+                    BufferedReader input_cid;
+                    input_cid = new BufferedReader(new InputStreamReader(System.in));
+                    String cid;
+                    System.out.print("Please enter Customer ID: ");
+                    cid = input_cid.readLine();
+
+                    //Input Purchase Qty from keyboard 
+                    BufferedReader input_pur_qty;
+                    input_pur_qty = new BufferedReader(new InputStreamReader(System.in));
+                    String pur_qty;
+                    System.out.print("Please enter Purchase Quantity: ");
+                    pur_qty = input_pur_qty.readLine();
+
+                    //Input Purchase unit price from keyboard
+                    BufferedReader input_pur_price;
+                    input_pur_price = new BufferedReader(new InputStreamReader(System.in));
+                    String pur_price;
+                    System.out.print("Please enter Purchase Unit Price: ");
+                    pur_price = input_pur_price.readLine();
+
+                    //Prepare to call stored procedure add_purchase:
+                    CallableStatement insert = conn.prepareCall("Begin check_pkg.add_purchase(:1,:2,:3,:4,:5); end;");
+
+                    insert.setString(1, eid);
+                    insert.setString(2, pid);
+                    insert.setString(3, cid);
+                    insert.setString(4, pur_qty);
+                    insert.setString(5, pur_price);
+
+
+                    // execute and retrieve the result set
+                    insert.executeQuery();
+
+                    //Query again.
+                    System.out.println("\nModified details of Products table\n");
+                    rset = stmt.executeQuery("SELECT * FROM products");
+
+                    // Print products table after new changes
+                    while (rset.next()) {
+                        System.out.print(rset.getString(1) + "  " + "\t");
+                        System.out.print(rset.getString(2) + "  " + "\t");
+                        System.out.print(rset.getInt(3) + "  " + "\t");
+                        System.out.print(rset.getInt(4) + "  " + "\t");
+                        System.out.print(rset.getDouble(5) + "  " + "\t");
+                        System.out.print(rset.getDouble(6) + "  " + "\n");
+                    }
+
+                    System.out.println("\nModified details of Customers table\n");
+                    rs1 = stmt.executeQuery("SELECT * FROM customers");
+                    // Print customers table after new changes 
+                    while (rs1.next()) {
+                        System.out.print(rs1.getString(1) + "  " + "\t");
+                        System.out.print(rs1.getString(2) + "  " + "\t");
+                        System.out.print(rs1.getString(3) + "  " + "\t");
+                        System.out.print(rs1.getInt(4) + "  " + "\t");
+                        System.out.print(rs1.getDate(5) + "  " + "\n");
+                    }
+
+                    System.out.println("\nModified details in Purchases table\n");
+                    rs = stmt.executeQuery("SELECT * FROM purchases");
+                    // Print purchases table after new changes 
+                    while (rs.next()) {
+                        System.out.print(rs.getString(1) + "  " + "\t");
+                        System.out.print(rs.getString(2) + "  " + "\t");
+                        System.out.print(rs.getString(3) + "  " + "\t");
+                        System.out.print(rs.getString(4) + "  " + "\t");
+                        System.out.print(rs.getDate(5) + "  " + "\t");
+                        System.out.print(rs.getInt(6) + "  " + "\t");
+                        System.out.print(rs.getDouble(7) + "  " + "\t");
+                        System.out.print(rs.getDouble(8) + "  " + "\t");
+                        System.out.print(rs.getDouble(9) + "  " + "\n");
+                    }
+                    try (CallableStatement call = conn.prepareCall(
+                        "declare " +
+                        "  num integer := 1000;" +
+                        "begin " +
+                        "  dbms_output.get_lines(?, num);" +
+                        "end;"
+                    )) {
+                        call.registerOutParameter(1, Types.ARRAY,
+                            "DBMSOUTPUT_LINESARRAY");
+                        call.execute();
+
+                        Array array = null;
+                        try {
+                            array = call.getArray(1);
+                            if (array != null) {
+                                Stream.of((Object[]) array.getArray())
+                                    .forEach(System.out::println);
+                            }
+                        } finally {
+                            if (array != null)
+                                array.free();
+                        }
+                    }
+                    s.executeUpdate("begin dbms_output.disable(); end;");
+
+                    //close the result set, statement, and the connection
+                    rset.close();
+                    rs.close();
+                    rs1.close();
+                    stmt.close();
+
+
+                }
+                if(option == 6) {
+                	// Query
+                    Statement stmt = conn.createStatement();
+
+                    // Save result
+                    ResultSet rset;
+                    //s.executeUpdate("begin dbms_output.enable(); end;");
+                    rset = stmt.executeQuery("SELECT * FROM logs");
+
+                    // Print the customers table before insertion 
+                    while (rset.next()) {
+
+                        System.out.print(rset.getInt(1) + "  " + "\t");
+                        System.out.print(rset.getString(2) + "  " + "\t");
+                        System.out.print(rset.getString(3) + "  " + "\t");
+                        System.out.print(rset.getDate(4) + "  " + "\t");
+                        System.out.print(rset.getString(5) + "  " + "\t");
+                        System.out.print(rset.getString(6) + "  " + "\n");
+                    }
+                    rset.close();
+                    stmt.close();
+
+                }
+                //if 7 is entered by the user then quit
+                if (option == 7) {
+                    System.out.println("\n Bye !");
+                    //close the connection to sqlplus
+                    conn.close();
+                }
+            }
+        } catch (SQLException ex) {
+            System.out.println("\n*** SQLException caught ***\n" + ex.getMessage());
+        } catch (Exception e) {
+            System.out.println("\n*** other Exception caught ***\n");
+        }
+    }
+}

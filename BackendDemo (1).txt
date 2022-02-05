@@ -1,0 +1,215 @@
+set serveroutput on
+create or replace package check_pkg as
+type ref_cursor is ref cursor;
+function show_employees return ref_cursor;
+function show_customers return ref_cursor;
+function show_products return ref_cursor;
+function show_purchases return ref_cursor;
+
+procedure purchases_made(p_cid in customers.cid%type, p_refcursor out sys_refcursor);
+function no_of_customers(f_pid in products.pid%type) return number;
+procedure add_customer(p_cid in customers.cid%type,p_name in customers.name%type,p_telephone# in customers.telephone#%type);
+procedure add_purchase(p_eid in employees.eid%type, p_pid in products.pid%type, p_cid in customers.cid%type, p_pur_qty in purchases.qty%type, p_pur_unit_price in purchases.unit_price%type);
+end check_pkg; --end of package specification
+/
+show errors
+
+--body of check_pkg
+ create or replace package body check_pkg as
+--------------------------------------------------------------------------------------
+function show_employees
+return ref_cursor
+is
+checker number;
+a ref_cursor;
+begin
+open a for
+select * from employees;
+
+select count(eid) into checker from (select * from employees order by eid desc) where rownum < 2;
+        if checker < 1 then
+        dbms_output.put_line('No data found in employees table');
+        end if;
+
+return a;
+end;
+
+
+function show_customers
+return ref_cursor is
+checker number;
+b ref_cursor;
+begin
+open b for
+select * from customers;
+
+select count(cid) into checker from (select * from customers order by cid desc) where rownum < 2;
+        if checker < 1 then
+        dbms_output.put_line('No data found in customers table');
+        end if;
+
+return b;
+
+end;
+
+
+
+function show_products
+return ref_cursor is
+checker number;
+c ref_cursor;
+begin
+open c for
+select * from products;
+
+select count(pid) into checker from (select * from products order by pid desc) where rownum < 2;
+        if checker < 1 then
+        dbms_output.put_line('No data found in products table');
+        end if;
+
+return c;
+
+end;
+
+
+
+function show_purchases
+return ref_cursor is
+checker number;
+d ref_cursor;
+begin
+open d for
+select * from purchases;
+
+select count(pur#) into checker from (select * from purchases order by pid desc) where rownum < 2;
+        if checker < 1 then
+        dbms_output.put_line('No data found in purchases table');
+        end if;
+
+return d;
+
+end;
+
+-----------------------------------------------------------------------------------------------
+  procedure purchases_made
+        (p_cid in customers.cid%type,
+        p_refcursor out sys_refcursor)
+        is
+        checker number;
+        begin
+                open p_refcursor for
+                select name, pid, pur_date, qty, unit_price, total
+                from customers, purchases where customers.cid = p_cid
+                and customers.cid = purchases.cid;
+
+        select count(cid) into checker from customers where cid = p_cid and cid in(select cid from purchases);
+
+        if checker = 0 then
+        dbms_output.put_line('The customer ' || p_cid||' has not made any purchases yet !');
+        end if;
+                select count(cid) into checker from customers where cid = p_cid;
+        if checker = 0 then
+                dbms_output.put_line('The customer id '|| p_cid ||' does not exist, please try again !' );
+        end if;
+ end;
+
+----------------------------------------------------------------------------------------------
+function no_of_customers(f_pid in products.pid%type)
+        return number is
+        num_of_customers number;
+        checker number;
+        begin
+                select count(cid) into num_of_customers from
+                purchases where pid = f_pid;
+
+                select count(pid) into checker from products where pid = f_pid;
+
+                if checker = 0 then
+                dbms_output.put_line('The pid '|| f_pid||' does not exist in the records, please try again');
+                end if;
+
+                return (num_of_customers);
+        end;
+----------------------------------------------------------------------------------------------
+
+procedure add_customer
+        (p_cid in customers.cid%type,
+        p_name in customers.name%type,
+        p_telephone# in customers.telephone#%type)
+        is
+                v_cid varchar2(10);
+        begin
+         select count(cid) into v_cid from customers where cid = p_cid;
+                 if v_cid > 0 then
+                 dbms_output.put_line('The customer id you have entered already exists ! Please enter a unique customer id');
+                 end if;
+                if v_cid = 0 then
+            insert into customers(cid, name, telephone#, visits_made, last_visit_date) values
+                (p_cid, p_name, p_telephone#, 1, sysdate);
+                end if;
+end;
+-------------------------------------------------------------------------------------------------
+
+procedure add_purchase
+        (p_eid in employees.eid%type,
+        p_pid in products.pid%type,
+        p_cid in customers.cid%type,
+        p_pur_qty in purchases.qty%type,
+        p_pur_unit_price in purchases.unit_price%type)
+        is
+        v_eid employees.eid%type;
+        v_pid products.pid%type;
+        v_cid customers.cid%type;
+        v_pur_qty purchases.qty%type;
+        v_pur_unit_price purchases.unit_price%type;
+        v_saving purchases.saving%type;
+        v_regular_price products.regular_price%type;
+        v_qoh products.qoh%type;
+        checker number;
+        eid_count number(2);
+        pid_count number(2);
+        cid_count number(2);
+
+
+        begin
+                checker := 0;
+                select count(eid) into eid_count from employees where eid = p_eid;
+                select count(pid) into pid_count from products where pid = p_pid;
+                select count(cid) into cid_count from customers where cid = p_cid;
+
+                if eid_count < 1 then
+                checker := 1;
+                dbms_output.put_line('The eid you have entered does not exist in the employees table.');
+                END IF;
+                if pid_count < 1 then
+                dbms_output.put_line('The pid you have entered does not exist in the products table.');
+                checker := 1;
+                END IF;
+                if cid_count < 1 then
+                dbms_output.put_line('The cid you have entered does not exist in the customers table.');
+                checker := 1;
+                END IF;
+
+                 select products.qoh into v_qoh from products where products.pid = p_pid;
+                if p_pur_qty > v_qoh then
+                dbms_output.put_line('Insufficient quantity in stock');
+                checker := 1;
+                end if;
+
+                if checker = 0 then
+                        select regular_price into v_regular_price from products where products.pid = p_pid;
+                        v_saving := p_pur_qty*(v_regular_price - p_pur_unit_price);
+
+                        insert into purchases(pur#, eid, pid, cid, pur_date, qty, unit_price, total, saving) values
+                        (seqpur#.nextval, p_eid, p_pid, p_cid, sysdate, p_pur_qty, p_pur_unit_price, p_pur_qty * p_pur_unit_price, v_saving);
+                end if;
+                exception
+                when no_data_found then
+                        dbms_output.put_line('please try again');
+
+        end;
+------------------------------------------------------------------------------------------------
+end; --packg body end
+
+/
+show errors
