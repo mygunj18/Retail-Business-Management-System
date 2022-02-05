@@ -1,0 +1,16 @@
+create or replace function no_of_customers(f_pid in products.pid%type)
+        return number is
+        num_of_customers number;
+        begin
+                select count(cid) into num_of_customers from
+                purchases where pid = f_pid;
+                return (num_of_customers);
+        EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+        dbms_output.put_line('You have entered a Non-existing Product Id');
+        
+        WHEN OTHERS THEN
+        dbms_output.put_line('Could not fetch the records. Please try again!');
+        end;
+/
+show errors

@@ -1,0 +1,226 @@
+--start of package specification
+
+create or replace package check_pkg as
+type ref_cursor is ref cursor;
+function show_employees return ref_cursor;
+function show_customers return ref_cursor;
+function show_products return ref_cursor;
+function show_purchases return ref_cursor;
+
+procedure purchases_made(p_cid in customers.cid%type, p_refcursor out sys_refcursor);
+function no_of_customers(f_pid in products.pid%type) return number;
+procedure add_customer(p_cid in customers.cid%type,p_name in customers.name%type,p_telephone# in customers.telephone#%type);
+procedure add_purchase(p_eid in employees.eid%type, p_pid in products.pid%type, p_cid in customers.cid%type, p_pur_qty in purchases.qty%type, p_pur_unit_price in purchases.unit_price%type);
+end check_pkg; --end of package specification
+/
+show errors
+
+--body of Package Retail
+ create or replace package body check_pkg as
+
+--Function to show all data from employees table. This function will handle runtime exception if in case table found to be empty. 
+function show_employees
+return ref_cursor is
+a ref_cursor;
+begin
+open a for
+select * from employees;
+return a;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+	dbms_output.put_line('No data found in employees table');
+WHEN OTHERS THEN
+	dbms_output.put_line('Could not fetch the records. Please try again!');
+end;
+
+--Function to show all data from customers table. This function will handle runtime exception if in case table found to be empty. 
+function show_customers
+return ref_cursor is
+b ref_cursor;
+begin
+open b for
+select * from customers;
+return b;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+	dbms_output.put_line('No data found in customers table');
+WHEN OTHERS THEN
+	dbms_output.put_line('Could not fetch the records. Please try again!');
+end;
+
+
+--Function to show all data from products table. This function will handle runtime exception if in case table found to be empty. 
+function show_products
+return ref_cursor is
+c ref_cursor;
+begin
+open c for
+select * from products;
+return c;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+	dbms_output.put_line('No data found in products table');
+WHEN OTHERS THEN
+	dbms_output.put_line('Could not fetch the records. Please try again!');
+end;
+
+
+--Function to show all data from products table. This function will handle runtime exception if in case table found to be empty. 
+function show_purchases
+return ref_cursor is
+d ref_cursor;
+begin
+open d for
+select * from purchases;
+return d;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+	dbms_output.put_line('No data found in purchases table');
+WHEN OTHERS THEN
+	dbms_output.put_line('Could not fetch the records. Please try again!');
+end;
+
+-----------------------------------------------------------------------------------------------
+--Procedure to show purchases made by particular customer by taking cid as in parameter. 
+
+ procedure purchases_made
+        (p_cid in customers.cid%type,
+        p_refcursor out sys_refcursor)
+        is
+        begin
+                open p_refcursor for
+                select name, pid, pur_date, qty, unit_price, total
+                from customers, purchases where customers.cid = p_cid
+                and customers.cid = purchases.cid;
+EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+        	dbms_output.put_line('The customer Id you have entered does not exist in the customers table');
+        WHEN CURSOR_ALREADY_OPEN THEN
+       		dbms_output.put_line('Cursor is already open');        
+        WHEN OTHERS THEN
+        	dbms_output.put_line('Could not fetch the records. Please try again!');
+ end;
+
+----------------------------------------------------------------------------------------------
+--Function to count no. of customers purchased a particular product.It takes product id as input paramater. It also handles runtime exception caused due to incorrect product id by user.  
+
+function no_of_customers(f_pid in products.pid%type)
+        return number is
+        num_of_customers number;
+        begin
+                select count(cid) into num_of_customers from
+                purchases where pid = f_pid;
+                return (num_of_customers);
+ EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+        dbms_output.put_line('The product Id you have entered does not exist in the products table');
+        
+        WHEN OTHERS THEN
+        dbms_output.put_line('Could not fetch the number of customers who have bought the specific product. Please try again!');
+        end;
+----------------------------------------------------------------------------------------------
+--Procedure to insert new customers into customers table. It takes customer id, name, telephone# as in parameter. 
+--It also handles exception caused due to incorrect telephone# entered by user or duplicate value on index when user tries to insert already existing cid.
+
+procedure add_customer
+        (p_cid in customers.cid%type,
+        p_name in customers.name%type,
+        p_telephone# in customers.telephone#%type)
+        is
+        incorrect_telephone# EXCEPTION;
+        begin
+            if LENGTH(p_telephone#) <>  12 then
+                raise incorrect_telephone#;
+        else
+            insert into customers(cid, name, telephone#, visits_made, last_visit_date) values
+                (p_cid, p_name, p_telephone#, 1, sysdate);
+        end if;
+
+        EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+        dbms_output.put_line('The customer id you have entered already exists ! Please enter a unique customer id');
+        WHEN incorrect_telephone# THEN
+        dbms_output.put_line('Incorrect format of telephone number entered. Please enter in (XXX-XXX-XXXX) format!');
+        WHEN OTHERS THEN
+        dbms_output.put_line('Could not perform insert operation. Please try again!');
+        end;
+
+-------------------------------------------------------------------------------------------------
+--Procedure to insert new purchases made from customers into purchases table. It takes employee_id, product_id, customer id, purchase quantity, purchase unit price as IN parameter.
+--It also handles exception caused by incorrect eid, pid, cid and insufficient quantity of stocks individually. 
+
+procedure add_purchase
+        (p_eid in employees.eid%type,
+        p_pid in products.pid%type,
+        p_cid in customers.cid%type,
+        p_pur_qty in purchases.qty%type,
+        p_pur_unit_price in purchases.unit_price%type)
+        is
+        v_eid employees.eid%type;
+        v_pid products.pid%type;
+        v_cid customers.cid%type;
+        v_pur_qty purchases.qty%type;
+        v_pur_unit_price purchases.unit_price%type;
+        v_saving purchases.saving%type;
+        v_regular_price products.regular_price%type;
+        v_qoh products.qoh%type;
+        qoh_exception exception;
+        ------------------------
+	eid_exception exception;
+        pid_exception exception;
+        cid_exception exception;
+        eid_count number(2);
+        pid_count number(2);
+        cid_count number(2);
+
+        ------------------------
+        begin
+
+                select count(eid) into eid_count from employees where eid = p_eid;
+                select count(pid) into pid_count from products where pid = p_pid;
+                select count(cid) into cid_count from customers where cid = p_cid;
+
+                if eid_count < 1 then
+                        raise eid_exception;
+                END IF;
+		if pid_count < 1 then
+                        raise pid_exception;
+                END IF;
+                if cid_count < 1 then
+                        raise cid_exception;
+                END IF;
+
+                select products.qoh into v_qoh from products where products.pid = p_pid;
+
+                if p_pur_qty > v_qoh then
+                        raise qoh_exception;
+                end if;
+
+                select regular_price into v_regular_price from products where products.pid = p_pid;
+                v_saving := p_pur_qty*(v_regular_price - p_pur_unit_price);
+
+                insert into purchases(pur#, eid, pid, cid, pur_date, qty, unit_price, total, saving) values
+                (seqpur#.nextval, p_eid, p_pid, p_cid, sysdate, p_pur_qty, p_pur_unit_price, p_pur_qty * p_pur_unit_price, v_saving);
+
+                EXCEPTION
+
+                WHEN eid_exception THEN
+                dbms_output.put_line('The eid you have entered does not exist in the employees table. Please try again');
+
+                WHEN pid_exception THEN
+                dbms_output.put_line('The pid you have entered does not exist in the products table. Please try again');
+
+                WHEN cid_exception THEN
+                dbms_output.put_line('The cid you have entered does not exist in the customers table. Please try again');
+
+                WHEN qoh_exception THEN
+                dbms_output.put_line('Insufficient quantity in stock');
+
+                WHEN OTHERS THEN
+                dbms_output.put_line('Could not perform insert action. Please check values entered!');
+        end;
+------------------------------------------------------------------------------------------------
+end; --end of package body 
+
+/
+show errors

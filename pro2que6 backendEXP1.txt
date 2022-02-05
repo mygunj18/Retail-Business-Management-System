@@ -1,0 +1,74 @@
+create or replace procedure add_purchase
+        (p_eid in employees.eid%type,
+        p_pid in products.pid%type,
+        p_cid in customers.cid%type,
+        p_pur_qty in purchases.qty%type,
+        p_pur_unit_price in purchases.unit_price%type)
+        is
+        v_eid employees.eid%type;
+        v_pid products.pid%type;
+        v_cid customers.cid%type;
+        v_pur_qty purchases.qty%type;
+        v_pur_unit_price purchases.unit_price%type;
+        v_saving purchases.saving%type;
+        v_regular_price products.regular_price%type;
+        v_qoh products.qoh%type;
+        qoh_exception exception;
+--------------------------------------------------------------------------------------------------------------
+        eid_exception exception;
+        pid_exception exception;
+        cid_exception exception;
+        eid_count number(2);
+        pid_count number(2);
+        cid_count number(2);
+
+--------------------------------------------------------------------------------------------------------------
+        begin
+
+                select count(eid) into eid_count from employees where eid = p_eid;
+                select count(pid) into pid_count from products where pid = p_pid;
+                select count(cid) into cid_count from customers where cid = p_cid;
+
+                if eid_count < 1 then
+                        raise eid_exception;
+                END IF;
+
+                if pid_count < 1 then
+                        raise pid_exception;
+                END IF;
+
+                if cid_count < 1 then
+                        raise cid_exception;
+                END IF;
+
+
+                select products.qoh into v_qoh from products where products.pid = p_pid;
+
+                if p_pur_qty > v_qoh then
+                        raise qoh_exception;
+                end if;
+
+                select regular_price into v_regular_price from products where products.pid = p_pid;
+                v_saving := p_pur_qty*(v_regular_price - p_pur_unit_price);
+
+                insert into purchases(pur#, eid, pid, cid, pur_date, qty, unit_price, total, saving) values
+                (seqpur#.nextval, p_eid, p_pid, p_cid, sysdate, p_pur_qty, p_pur_unit_price, p_pur_qty * p_pur_unit_price, v_saving);
+                EXCEPTION
+
+                WHEN eid_exception THEN
+                dbms_output.put_line('The eid you have entered does not exist in the employees table. Please try again');
+
+                WHEN pid_exception THEN
+                dbms_output.put_line('The pid you have entered does not exist in the products table. Please try again');
+
+                WHEN cid_exception THEN
+                dbms_output.put_line('The cid you have entered does not exist in the customers table. Please try again');
+
+                WHEN qoh_exception THEN
+                dbms_output.put_line('Insufficient quantity in stock');
+
+                WHEN OTHERS THEN
+                dbms_output.put_line('Could not perform insert action. Please check values entered!');
+        end;
+/
+show errors

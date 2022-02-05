@@ -1,0 +1,22 @@
+-----
+create or replace procedure purchases_made
+        (p_cid in customers.cid%type,
+        p_refcursor out sys_refcursor)
+        is
+        begin   
+                open p_refcursor for
+                select name, pid, pur_date, qty, unit_price, total
+                from customers, purchases where customers.cid = p_cid
+                and customers.cid = purchases.cid;
+
+        EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+        	dbms_output.put_line('You have entered Non-existing Customer Id');
+        WHEN CURSOR_ALREADY_OPEN THEN
+       		dbms_output.put_line('Cursor is already open');        
+        WHEN OTHERS THEN
+        	dbms_output.put_line('Could not fetch the records. Please try again!');
+ end;
+
+/
+show errors

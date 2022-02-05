@@ -1,0 +1,63 @@
+create or replace function show_employees
+return ref_cursor is
+a ref_cursor;
+begin
+open a for
+select * from employees;
+return a;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+	dbms_output.put_line('No data in table');
+WHEN OTHERS THEN
+	dbms_output.put_line('Could not fetch the records. Please try again!');
+end;
+/
+show errors
+
+create or replace function show_customers
+return ref_cursor is
+b ref_cursor;
+begin
+open b for
+select * from customers;
+return b;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+	dbms_output.put_line('No data in table');
+WHEN OTHERS THEN
+	dbms_output.put_line('Could not fetch the records. Please try again!');
+end;
+/
+show errors
+
+create or replace function show_products
+return ref_cursor is
+c ref_cursor;
+begin
+open c for
+select * from products;
+return c;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+	dbms_output.put_line('No data in table');
+WHEN OTHERS THEN
+	dbms_output.put_line('Could not fetch the records. Please try again!');
+end;
+/
+show errors
+
+create or replace function show_purchases
+return ref_cursor is
+d ref_cursor;
+begin
+open d for
+select * from purchases;
+return d;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+	dbms_output.put_line('No data in table');
+WHEN OTHERS THEN
+	dbms_output.put_line('Could not fetch the records. Please try again!');
+end;
+/
+show errors

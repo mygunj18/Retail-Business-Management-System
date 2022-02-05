@@ -1,0 +1,96 @@
+
+--1
+set serveroutput on
+
+create or replace trigger customer_insert_trigger
+after insert on customers
+for each row
+declare
+	u_cid customers.cid%type;
+begin 
+	u_cid := :new.cid;
+	insert into logs(log#,user_name,operation,op_time, table_name, tuple_pkey) values 
+		(seqlog#.nextval, USER, 'INSERT', sysdate, 'customers', u_cid );
+exception
+WHEN OTHERS THEN
+dbms_output.put_line('Trigger could not be fired after insert on customers');
+end;
+/
+show errors
+
+--2
+
+create or replace trigger customer_updt_lvd_trigger
+after update on customers
+for each row 
+when (new.last_visit_date > old.last_visit_date)
+declare
+	v_cid customers.cid%type;
+begin
+	v_cid := :new.cid;
+	insert into logs(log#,user_name,operation,op_time, table_name, tuple_pkey) values 
+		(seqlog#.nextval, USER, 'UPDATE', sysdate, 'customers', v_cid );
+exception
+WHEN OTHERS THEN
+dbms_output.put_line('Trigger could not be fired after update on customers');
+end;
+/
+show errors
+
+--3
+
+create or replace trigger customer_updt_vm_trigger
+after update on customers
+for each row 
+when (new.visits_made > old.visits_made)
+declare
+	w_cid customers.cid%type;
+begin
+	w_cid := :new.cid;
+	insert into logs(log#,user_name,operation,op_time, table_name, tuple_pkey) values 
+		(seqlog#.nextval, USER, 'UPDATE', sysdate, 'customers', w_cid );
+exception
+WHEN OTHERS THEN
+dbms_output.put_line('Trigger could not be fired after update on customers');
+end;
+/
+show errors
+
+--4
+
+create or replace trigger purchases_insert_trigger
+after insert on purchases
+for each row
+when(new.pur# > old.pur#)
+declare
+	x_pur# purchases.pur#%type;
+begin
+	x_pur# := :new.pur#;
+	insert into logs(log#,user_name,operation,op_time, table_name, tuple_pkey) values 
+		(seqlog#.nextval, USER, 'INSERT', sysdate, 'purchases', x_pur#);
+exception
+WHEN OTHERS THEN
+dbms_output.put_line('Trigger could not be fired after insert on purchases');
+end;
+/
+show errors
+
+--5
+
+create or replace trigger products_update_trigger
+after update on products
+for each row
+when(new.qoh > old.qoh)
+declare
+	y_qoh products.qoh%type;
+begin
+	y_qoh := :new.qoh;
+	insert into logs(log#,user_name,operation,op_time, table_name, tuple_pkey) values 
+		(seqlog#.nextval, USER, 'UPDATE', sysdate, 'purchases', y_qoh);
+exception
+WHEN OTHERS THEN
+dbms_output.put_line('Trigger could not be fired after update on products');
+end;
+/
+show errors
+
