@@ -1,0 +1,85 @@
+set serveroutput on
+
+---------------1--------------------------------------------
+set serveroutput on
+VARIABLE l_cursor REFCURSOR
+
+BEGIN
+  :l_cursor := check_pkg.show_employees;
+END;
+/
+
+PRINT l_cursor
+-----------------------------------------------------------------
+set serveroutput on
+VARIABLE l_cursor REFCURSOR
+
+BEGIN
+  :l_cursor := check_pkg.show_customers;
+END;
+/
+
+PRINT l_cursor
+--------------------------------------------------------------
+set serveroutput on
+VARIABLE l_cursor REFCURSOR
+
+BEGIN
+  :l_cursor := check_pkg.show_products;
+END;
+/
+
+PRINT l_cursor
+---------------------------------------------------------------
+set serveroutput on
+VARIABLE l_cursor REFCURSOR
+
+BEGIN
+  :l_cursor := check_pkg.show_purchases;
+END;
+/
+
+PRINT l_cursor
+-----------------------------------------------------------------
+--------------------2---------------------------------------------
+set serveroutput on
+VAR x REFCURSOR;
+EXEC check_pkg.purchases_made('c001',:x);
+PRINT x;
+-------------------------------------------------------------------
+---------------------3--------------------------------------------
+
+set serveroutput on
+declare
+h number;
+
+BEGIN
+  h := check_pkg.no_of_customers('p001');
+dbms_output.put_line(h);
+END;
+/
+
+----------------------------------------------------------------
+--------------------------4---------------------------------------
+
+set serveroutput on
+exec check_pkg.add_customer('c14','abcd','444-444-4444');  --success case
+
+set serveroutput on
+exec check_pkg.add_customer('c004','abcd','444-444-4444');  --fail case
+
+----------------------------------------------------------------
+------------------------5----------------------------------------
+set serveroutput on
+exec check_pkg.add_purchase('e07','p011','c011',2,2);
+
+
+-----------------------------------------------------------------
+
+
+
+
+
+
+
+
